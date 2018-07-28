@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from model import Model
 
-from common.shared_functions import glorot_variance, make_tf_variable, make_tf_bias
+from ingredients.shared_functions import glorot_variance, make_tf_variable, make_tf_bias
 
 class RandomEmbedding(Model):
     embedding_width = None

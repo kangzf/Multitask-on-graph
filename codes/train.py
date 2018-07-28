@@ -1,21 +1,19 @@
 import argparse
-import random
 
 import tensorflow as tf
 from optimization.optimize import build_tensorflow
-from ingredients import settings_reader, io, multitask_model, optimizer_parameter_parser, evaluation, auxilliaries
-from model import Model
+from additional.utils import *
+from ingredients import settings_reader, fileio, optimizer_parameter_parser, evaluation, auxilliaries
+import multitask_model
 import numpy as np
 
 parser = argparse.ArgumentParser(description="Train a model on a given dataset.")
-parser.add_argument("--settings", default="../settings/gcn_basis.exp",help="Filepath for settings file.", required=False)
-parser.add_argument("--dataset", default="../data/Toy",help="Filepath for dataset.", required=False)
+parser.add_argument("--settings", default="../settings/gcn_basis.exp", help="Filepath for settings file.", required=False)
+parser.add_argument("--dataset", default="../data/Toy", help="Filepath for dataset.", required=False)
 args = parser.parse_args()
 
 settings = settings_reader.read(args.settings)
 print(settings)
-
-
 
 '''
 Load datasets:
@@ -28,24 +26,31 @@ entities_path = dataset + '/entities.dict'
 train_path = dataset + '/train.txt'
 valid_path = dataset + '/valid.txt'
 test_path = dataset + '/test.txt'
+node_type = dataset + 'node type'
+
+# Load node labels
+# adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(dataset)
+y_train = np.loadtxt(dataset + '/y_train.txt', dtype = int)
+y_test = np.loadtxt(dataset + '/y_test.txt', dtype = int)
+y_val = np.loadtxt(dataset + '/y_val.txt', dtype = int)
 
 #Extend paths for accuracy evaluation:
 if settings['Evaluation']['Metric'] == 'Accuracy':
     valid_path = dataset + '/valid_accuracy.txt'
     test_path = dataset + '/test_accuracy.txt'
 
-train_triplets = io.read_triplets_as_list(train_path, entities_path, relations_path)
+train_triplets = fileio.read_triplets_as_list(train_path, entities_path, relations_path)
 
-valid_triplets = io.read_triplets_as_list(valid_path, entities_path, relations_path)
-test_triplets = io.read_triplets_as_list(test_path, entities_path, relations_path)
+valid_triplets = fileio.read_triplets_as_list(valid_path, entities_path, relations_path)
+test_triplets = fileio.read_triplets_as_list(test_path, entities_path, relations_path)
 
 
 train_triplets = np.array(train_triplets)
 valid_triplets = np.array(valid_triplets)
 test_triplets = np.array(test_triplets)
 
-entities = io.read_dictionary(entities_path)
-relations = io.read_dictionary(relations_path)
+entities = fileio.read_dictionary(entities_path)
+relations = fileio.read_dictionary(relations_path)
 
 '''
 shuffled_rels = np.arange(len(relations))
@@ -85,13 +90,25 @@ decoder_settings.merge(general_settings)
 optimizer_settings.merge(general_settings)
 evaluation_settings.merge(general_settings)
 
+'''
+Define placeholders
+'''
+num_supports = 1
+placeholders = {
+    'support': [tf.sparse_placeholder(tf.float32) for _ in range(num_supports)],
+    'features': tf.sparse_placeholder(tf.float32, shape=tf.constant([len(entities),int(encoder_settings['InternalEncoderDimension'])], dtype=tf.int64)),
+    'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1])),
+    'labels_mask': tf.placeholder(tf.int32),
+    'dropout': tf.placeholder_with_default(0., shape=()),
+    'num_features_nonzero': tf.placeholder(tf.int32)  # helper variable for sparse dropout
+}
 
 '''
-Construct multitask model, linkpd for link prediction, nodecf for nodeclassification:
+Construct multitask model, model for link prediction, nodecf for nodeclassification:
 '''
 encoder = multitask_model.build_shared(encoder_settings, train_triplets)
-linkpd = multitask_model.build_linkpd(encoder, decoder_settings)
-nodecf = multitask_model.build_nodecf(encoder, decoder_settings)
+model   = multitask_model.build_linkpd(encoder, decoder_settings)
+nodecf  = multitask_model.build_nodecf(encoder, placeholders, decoder_settings)
 
 '''
 Construct the optimizer with validation MRR as early stopping metric:
@@ -129,7 +146,7 @@ def score_validation_data(validation_data):
 
 opp.set_early_stopping_score_function(score_validation_data)
 
-print(len(train_triplets))
+print('train_triplets', len(train_triplets))
 
 adj_list = [[] for _ in entities]
 for i,triplet in enumerate(train_triplets):
@@ -175,7 +192,7 @@ def sample_edge_neighborhood(triplets, sample_size):
             weights = np.ones_like(weights)
             weights[np.where(sample_counts == 0)] = 0
 
-        probabilities = (weights) / np.sum(weights)
+        probabilities = weights / np.sum(weights)
         chosen_vertex = np.random.choice(np.arange(degrees.shape[0]), p=probabilities)
         chosen_adj_list = adj_list[chosen_vertex]
         seen[chosen_vertex] = True
@@ -258,9 +275,10 @@ model.register_for_test(train_triplets)
 
 model.initialize_train()
 
-optimizer_weights = model.get_weights()
+optimizer_weights = model.get_weights() + nodecf.get_vars()
 optimizer_input = model.get_train_input_variables()
-loss = model.get_loss(mode='train') + model.get_regularization()
+loss = model.get_loss(mode='train') + model.get_regularization() \
+       + nodecf.get_loss()
 print(optimizer_input)
 
 '''

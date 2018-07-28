@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from model import Model
-from common.shared_functions import glorot_variance, make_tf_variable, make_tf_bias
+from ingredients.shared_functions import glorot_variance, make_tf_variable, make_tf_bias
 
 class HighwayLayer(Model):
     vertex_embedding_function = {'train': None, 'test': None}

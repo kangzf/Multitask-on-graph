@@ -14,7 +14,7 @@ class Model:
     save_iter=0
     saver=None
 
-    def __init__(self, next_component, settings):
+    def __init__(self, next_component, settings, **kwargs):
         self.next_component = next_component
         print('next_component',next_component)
         self.settings = settings

@@ -23,7 +23,7 @@ from ingredients.highway_layer import HighwayLayer
 from ingredients.dropover import DropoverLayer
 
 #from ingredients.variational_encoding import VariationalEncoding
-
+from node_specific.mlp import MLP
 
 def build_shared(shared_settings, triples):
     # if shared_settings['Name'] == "embedding":
@@ -321,13 +321,14 @@ def build_linkpd(shared, linkspf_settings):
     else:
         return None
 
-def build_nodecf(shared, node_settings):
-    return Dense(input_dim=FLAGS.hidden1,
-                                 output_dim=self.output_dim,
-                                 placeholders=self.placeholders,
-                                 act=lambda x: x,
-                                 dropout=True,
-                                 logging=self.logging)
+def build_nodecf(shared, placeholders, node_settings):
+    # return Dense(input_dim=FLAGS.hidden1,
+    #                              output_dim=self.output_dim,
+    #                              placeholders=self.placeholders,
+    #                              act=lambda x: x,
+    #                              dropout=True,
+    #                              logging=self.logging)
+    return MLP(placeholders, node_settings, next_component=shared, logging=True)
 
-def build_merge(model1, model2, node_settings):
-    return MergeLayer([model1, model2], node_settings);
+# def build_merge(model1, model2, node_settings):
+#     return MergeLayer([model1, model2], node_settings);

@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from common.shared_functions import dot_or_lookup, glorot_variance, make_tf_variable, make_tf_bias
+from ingredients.shared_functions import dot_or_lookup, glorot_variance, make_tf_variable, make_tf_bias
 
-from encoders.message_gcns.message_gcn import MessageGcn
+from shared.message_gcns.message_gcn import MessageGcn
 
 
 class BasisGcn(MessageGcn):

@@ -328,7 +328,7 @@ def build_nodecf(shared, placeholders, node_settings):
     #                              act=lambda x: x,
     #                              dropout=True,
     #                              logging=self.logging)
-    return MLP(placeholders, node_settings, next_component=shared, logging=True)
+    return MLP(placeholders, node_settings, next_component=shared, mode='train', logging=True)
 
 # def build_merge(model1, model2, node_settings):
 #     return MergeLayer([model1, model2], node_settings);

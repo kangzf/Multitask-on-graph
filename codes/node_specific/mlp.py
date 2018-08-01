@@ -15,12 +15,12 @@ class MLP(BilinearDiag):
         self.settings = settings
         self.next_component = next_component
 
-        # self.inputs = self.next_component.get_all_codes(mode='train')
-        self.inputs = placeholders['features']
-        # self.input_dim = input_dim
+        mode = kwargs.get('mode')
+        # subject_codes, _, object_codes = self.next_component.get_all_codes(mode=mode)
+        self.inputs = None # subject_codes + object_codes
         # e1s, _, e2s = self.compute_codes(mode='train')
-        self.input_dim = self.inputs.get_shape().as_list()[1]
-        # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions
+        # self.input_dim = self.inputs.get_shape().as_list()[1]
+        self.input_dim = int(self.settings['InternalEncoderDimension'])
         self.output_dim = placeholders['labels'].get_shape().as_list()[1]
         self.placeholders = placeholders
 
@@ -78,10 +78,15 @@ class MLP(BilinearDiag):
                                  dropout=True,
                                  logging=self.logging))
 
-    def get_loss(self, *args):
-        """ Wrapper for _loss() """
+    def get_loss(self, *args, default='loss'):
+        """ Wrapper for _loss() and _accuracy()"""
         # self._loss()
-        return self.loss
+        if default == 'loss':
+            return self.loss
+        elif default == 'acc':
+            return self.accuracy
+        else:
+            raise ValueError
 
     def get_vars(self):
         return list(self.vars.values())
@@ -105,6 +110,10 @@ class MLP(BilinearDiag):
         # Build metrics
         self._loss()
         self._accuracy()
+
+    def local_get_train_input_variables(self):
+        return [self.placeholders['labels'],
+                self.placeholders['labels_mask']]
 
         # self.opt_op = self.optimizer.minimize(self.loss)
     # def get_loss(self, mode='train'):

@@ -1,3 +1,6 @@
 *.log
 ~/.DS_Store
+*.xml
+*.iml
+__pycache__
 ~/codes/.DS_Store

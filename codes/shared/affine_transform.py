@@ -4,6 +4,7 @@ from model import Model
 
 from ingredients.shared_functions import glorot_variance, make_tf_variable, make_tf_bias
 
+
 class AffineTransform(Model):
     embedding_width = None
 
@@ -78,6 +79,5 @@ class AffineTransform(Model):
         if self.use_nonlinearity:
             hidden_subject = tf.nn.relu(hidden_subject)
             hidden_object = tf.nn.relu(hidden_object)
-
 
         return hidden_subject, hidden_relation, hidden_object
